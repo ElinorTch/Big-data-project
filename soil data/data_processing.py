@@ -1,6 +1,15 @@
 import os
 import sys
 import uuid
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+import joblib
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.metrics import accuracy_score, classification_report
 from pyspark import SparkContext
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, udf, split, regexp_replace
@@ -51,8 +60,13 @@ df_final = df_transformed.select(
     col("columns").getItem(7).alias("label")
 ).withColumn("id", uuid_udf())
 
-#supprimer les valeurs nulles du datafrasme
+#Nettoyage
 df_filtered = df_final.filter(col("N").rlike("^[0-9]+$"))
+# df_filtered.replace(',', '.', regex=True, inplace=True)
+# cols_to_convert = ['temperature', 'humidity', 'ph', 'rainfall']
+# df_filtered.dropna(inplace=True)
+# df_filtered.drop_duplicates(inplace=True)
+
 
 #Show the summary of the dataframe
 df_summary = df_filtered.select("N", "P", "K").describe()
