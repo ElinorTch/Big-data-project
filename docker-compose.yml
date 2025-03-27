@@ -1,0 +1,28 @@
+services:
+  cassandra:
+    image: cassandra:latest
+    container_name: cassandra-db
+    ports:
+      - "9042:9042"
+    environment:
+      - CASSANDRA_USER=admin
+      - CASSANDRA_PASSWORD=admin
+    volumes:
+      - cassandra-data:/var/lib/cassandra
+      - ./init.cql:/docker-entrypoint-initdb.d/init.cql
+    # command: >
+    #   sh -c "
+    #   until cqlsh -e 'DESC KEYSPACES'; do
+    #     echo 'Waiting for Cassandra to be ready...';
+    #     sleep 5;
+    #   done;
+    #   cqlsh -f /docker-entrypoint-initdb.d/init.cql;
+    #   "
+
+  kafka:
+    image: apache/kafka:latest
+    ports:
+      - 9092:9092
+
+volumes:
+  cassandra-data:

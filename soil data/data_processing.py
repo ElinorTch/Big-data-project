@@ -31,12 +31,13 @@ spark = SparkSession \
         .getOrCreate()
 
 df = spark\
-      .readStream \
-      .format("kafka") \
-      .option("kafka.bootstrap.servers", "localhost:9092") \
-      .option("subscribe", "data") \
-      .option("startingOffsets", "earliest") \
-      .load()
+    .readStream \
+    .format("kafka") \
+    .option("kafka.bootstrap.servers", "localhost:9092") \
+    .option("subscribe", "data") \
+    .option("startingOffsets", "earliest") \
+    .option("failOnDataLoss","false") \
+    .load()
 
 # Convertir la valeur du message en String et parser le JSON
 df_raw = df.selectExpr("CAST(value AS STRING)")
@@ -85,8 +86,8 @@ df_null = df_final.filter(
 
 query_cassandra = df_filtered.writeStream \
     .format("org.apache.spark.sql.cassandra") \
-    .option("keyspace", "data") \
-    .option("table", "informations") \
+    .option("keyspace", "projeti2") \
+    .option("table", "soil_data") \
     .option("checkpointLocation", "/tmp/checkpoint/") \
     .outputMode("append") \
     .start()

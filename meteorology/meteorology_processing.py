@@ -22,12 +22,13 @@ spark = SparkSession \
         .getOrCreate()
 
 df = spark\
-      .readStream \
-      .format("kafka") \
-      .option("kafka.bootstrap.servers", "localhost:9092") \
-      .option("subscribe", "data") \
-      .option("startingOffsets", "earliest") \
-      .load()
+    .readStream \
+    .format("kafka") \
+    .option("kafka.bootstrap.servers", "localhost:9092") \
+    .option("subscribe", "data") \
+    .option("startingOffsets", "earliest") \
+        .option("failOnDataLoss","false") \
+    .load()
 
 # Convertir la valeur du message en String et parser le JSON
 df_raw = df.selectExpr("CAST(value AS STRING)")
@@ -41,46 +42,38 @@ df_transformed = df_exploded.withColumn("columns", split(col("line"), ";"))
 uuid_udf = udf(lambda: str(uuid.uuid4()), StringType())
 
 df_final = df_transformed.select(
-    col("columns").getItem(0).alias("n").cast("int"),
-    col("columns").getItem(1).alias("p").cast("int"),
-    col("columns").getItem(2).alias("k").cast("int"),
-    regexp_replace(col("columns").getItem(3), ",", ".").cast("double").alias("temperature"),
-    regexp_replace(col("columns").getItem(4), ",", ".").cast("double").alias("humidity"),
-    regexp_replace(col("columns").getItem(5), ",", ".").cast("double").alias("ph"),
-    regexp_replace(col("columns").getItem(6), ",", ".").cast("double").alias("rainfall"),
-    col("columns").getItem(7).alias("label")
+    col("columns").getItem(0).alias("year").cast("int"),
+    col("columns").getItem(1).alias("month").cast("int"),
+    col("columns").getItem(2).alias("lat").cast("string"),
+    regexp_replace(col("columns").getItem(3), ",", ".").cast("double").alias("lon_175_180w"),
+    regexp_replace(col("columns").getItem(4), ",", ".").cast("double").alias("lon_170_175w"),
+    regexp_replace(col("columns").getItem(5), ",", ".").cast("double").alias("lon_165_170w"),
+    regexp_replace(col("columns").getItem(6), ",", ".").cast("double").alias("lon_160_165w"),
+    regexp_replace(col("columns").getItem(7), ",", ".").cast("double").alias("lon_155_160w"),
+    regexp_replace(col("columns").getItem(8), ",", ".").cast("double").alias("lon_150_155w"),
+    regexp_replace(col("columns").getItem(9), ",", ".").cast("double").alias("lon_145_150w"),
+    regexp_replace(col("columns").getItem(10), ",", ".").cast("double").alias("lon_140_145e"),
+    regexp_replace(col("columns").getItem(11), ",", ".").cast("double").alias("lon_145_150e"),
+    regexp_replace(col("columns").getItem(12), ",", ".").cast("double").alias("lon_150_155e"),
+    regexp_replace(col("columns").getItem(13), ",", ".").cast("double").alias("lon_155_160e"),
+    regexp_replace(col("columns").getItem(14), ",", ".").cast("double").alias("lon_160_165e"),
+    regexp_replace(col("columns").getItem(15), ",", ".").cast("double").alias("lon_165_170e"),
+    regexp_replace(col("columns").getItem(16), ",", ".").cast("double").alias("lon_170_175e"),
+    regexp_replace(col("columns").getItem(17), ",", ".").cast("double").alias("lon_175_180e"),
 ).withColumn("id", uuid_udf())
 
-#supprimer les valeurs nulles du datafrasme
-df_filtered = df_final.filter(col("N").rlike("^[0-9]+$"))
-
-#Show the summary of the dataframe
-df_summary = df_filtered.select("N", "P", "K").describe()
-
-#Afficher les lignes avec des null
-df_null = df_final.filter(
-    col("N").isNull() | 
-    col("P").isNull() | 
-    col("K").isNull() | 
-    col("temperature").isNull() | 
-    col("humidity").isNull() | 
-    col("ph").isNull() | 
-    col("rainfall").isNull() | 
-    col("label").isNull()
-)
-
-query_cassandra = df_filtered.writeStream \
+query_cassandra = df_final.writeStream \
     .format("org.apache.spark.sql.cassandra") \
-    .option("keyspace", "data") \
-    .option("table", "informations") \
+    .option("keyspace", "projeti2") \
+    .option("table", "historical_climate") \
     .option("checkpointLocation", "/tmp/checkpoint/") \
     .outputMode("append") \
     .start()
 
 # Afficher le flux en continu
-query = df_filtered.writeStream.outputMode("update").format("console").option("truncate", "false").start()
-query2 = df_summary.writeStream.outputMode("update").format("console").option("truncate", "false").start()
+query = df_final.writeStream.outputMode("update").format("console").option("truncate", "false").start()
+# query2 = df_summary.writeStream.outputMode("update").format("console").option("truncate", "false").start()
 
 query.awaitTermination()
-query2.awaitTermination()
+# query2.awaitTermination()
 query_cassandra.awaitTermination()

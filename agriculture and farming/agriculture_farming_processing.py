@@ -55,8 +55,8 @@ df_filtered = df_final.filter(col("farm_id").rlike("^F([0-9]+)$"))
 # Afficher le flux en continu
 query_cassandra = df_filtered.writeStream \
     .format("org.apache.spark.sql.cassandra") \
-    .option("keyspace", "data") \
-    .option("table", "farm_data") \
+    .option("keyspace", "projeti2") \
+    .option("table", "agriculture_data") \
     .option("checkpointLocation", "/tmp/checkpoint/") \
     .outputMode("append") \
     .start()
